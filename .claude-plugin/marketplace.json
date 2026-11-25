@@ -1,0 +1,5 @@
+{
+  "name": "auto-checkpoint",
+  "owner": { "name": "AlifRizza" },
+  "plugins": [{ "name": "auto-checkpoint", "source": "./" }]
+}

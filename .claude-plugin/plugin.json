@@ -1,0 +1,44 @@
+{
+  "name": "auto-checkpoint",
+  "version": "0.1.0",
+  "description": "Claude decides when to compact: past a token level it checkpoints to PROJECT_LOG.md at a safe sub-task boundary, compacts the same session and carries on",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Auto-checkpoint",
+      "description": "On: Claude checkpoints to PROJECT_LOG.md and the mod compacts; built-in Auto-compact is turned off. Off: the mod does nothing and built-in Auto-compact is turned back on. Takes effect at once; the next new session is fully switched.",
+      "default": true
+    },
+    "taskCheckAt": {
+      "type": "number",
+      "title": "New-task check (tokens)",
+      "description": "From here, each prompt asks Claude to check whether a new task fits before starting it.",
+      "default": 400000
+    },
+    "decideAt": {
+      "type": "number",
+      "title": "Decision window (tokens)",
+      "description": "From here, Claude looks for a safe sub-task boundary to checkpoint.",
+      "default": 600000
+    },
+    "mustAt": {
+      "type": "number",
+      "title": "Must checkpoint (tokens)",
+      "description": "From here, Claude checkpoints at the very next sub-task boundary.",
+      "default": 850000
+    },
+    "forceAt": {
+      "type": "number",
+      "title": "Forced checkpoint (tokens)",
+      "description": "A turn that ends here with no checkpoint gets one from the mod. The four levels must rise in this order; otherwise all fall back to their defaults.",
+      "default": 900000
+    },
+    "graphRefresh": {
+      "type": "boolean",
+      "title": "Refresh graphify graph",
+      "description": "Before compacting, refresh the project's graphify graph where one exists.",
+      "default": true
+    }
+  }
+}
