@@ -49,6 +49,8 @@ let isCompacting = false
 let isResumeWanted = true
 // You typed while the running turn worked: a checkpoint in it must not resume over your message.
 let isTypedThisTurn = false
+// You asked for a checkpoint (/save-checkpoint, or "checkpoint" in your message): allowed below the levels until saved.
+let isAsked = false
 // A compaction was vetoed: no forced checkpoint again until the context is back under forceAt.
 let isVetoed = false
 // The highest level whose note Claude has read since the last compaction.
@@ -210,6 +212,7 @@ export const register: Register = (on, options) => {
   isCompacting = false
   isResumeWanted = true
   isTypedThisTurn = false
+  isAsked = false
   isVetoed = false
   noted = 'none'
   floor = 0
@@ -236,6 +239,7 @@ export const register: Register = (on, options) => {
   if (!isEnabled) return
 
   on('command.run', { command: 'save-checkpoint' }, $ => {
+    isAsked = true
     // $.prompt.submit waits for the turn this command is part of: send it after this dispatch.
     $.clock.after(0, () => void $.prompt.submit({ text: ASK_PROMPT }))
     return { text: 'Asked Claude to checkpoint at its next safe boundary.' }
@@ -256,6 +260,7 @@ export const register: Register = (on, options) => {
     if (e.command !== undefined) return next(e)
     // A background task's notification is not you: it must not stop the resume.
     const isUser = e.origin.kind !== 'plugin' && e.origin.kind !== 'task-notification'
+    if (isUser && /checkpoint/i.test(e.text)) isAsked = true
     if (isUser && isDue && isResumeWanted) {
       isResumeWanted = false
       await keepOwed($)
@@ -278,6 +283,14 @@ export const register: Register = (on, options) => {
     const { tool: _tool, tool_use_id: _id, agentId: _agent, requestMeta: _meta, ...args } = e as Record<string, unknown>
     const cp = parseCheckpoint(args)
     if (typeof cp === 'string') return { deny: cp }
+    // Below the new-task level no note asked for one, so a compaction there only throws away context.
+    const { tokens, fitted } = await usageOf($)
+    if (tokens < fitted.taskCheckAt && !isAsked) {
+      const k = (n: number) => `${Math.round(n / 1000)}k`
+      return {
+        deny: `Not needed yet: ${k(tokens)} used, and the mod asks for checkpoints from ${k(fitted.taskCheckAt)}. Below that, checkpoint only when the user asks (/save-checkpoint). Carry on without one.`,
+      }
+    }
 
     const path = await save($, cp).catch((error: unknown) => String(error))
     if (path === undefined || !path.startsWith('/')) {
@@ -288,6 +301,7 @@ export const register: Register = (on, options) => {
     isCheckpointBatch = true
     isResumeWanted = !isTypedThisTurn
     isWaitingToasted = false
+    isAsked = false
     await keepOwed($)
 
     return { result: `Saved to ${path}. End your turn now; the mod compacts the conversation and resumes from next_step.` }

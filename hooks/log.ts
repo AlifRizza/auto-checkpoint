@@ -243,7 +243,7 @@ export const ASK_PROMPT =
 
 export const CHECKPOINT_TOOL = {
   name: 'checkpoint',
-  description: `Save a checkpoint of this project to ${LOG_FILE}; the mod then compacts the conversation and resumes from next_step with no prompt from the user. Call it only at a sub-task boundary where the next sub-task can be done well from the log alone, or when the user agreed to checkpoint before a new task. Make it your last tool call, also inside a script: after a successful call, end your turn.`,
+  description: `Save a checkpoint of this project to ${LOG_FILE}; the mod then compacts the conversation and resumes from next_step with no prompt from the user. Call it only when a context note from the mod asks for one, at a sub-task boundary where the next sub-task can be done well from the log alone, or when the user asked or agreed to checkpoint. A finished step or a pause for the user's decision is not by itself a reason to checkpoint. Make it your last tool call, also inside a script: after a successful call, end your turn.`,
   isDeferred: false,
   inputSchema: {
     type: 'object',

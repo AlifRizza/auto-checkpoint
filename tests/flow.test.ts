@@ -353,13 +353,42 @@ test('the log cannot be written: Claude gets the error, nothing is compacted', a
   expect(calls).toEqual([`write ${LOG}`])
 })
 
-test('a checkpoint below every level (the user asked) still compacts and resumes', async ($, on) => {
+const saveCheckpoint = ($: TestEngine) =>
+  $.command.run({ command: 'save-checkpoint', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 120 } })
+
+test('a checkpoint below every level (the user asked with /save-checkpoint) still compacts and resumes', async ($, on) => {
   const clock = mock.clock(on)
   const { calls } = fakeEngine(on, { tokens: 100_000 })
+  await saveCheckpoint($)
+  await clock.settle()
   await checkpoint($)
   await endTurn($)
   await clock.settle()
-  expect(calls).toEqual([`write ${LOG}`, 'compact', 'submit'])
+  expect(calls).toEqual(['submit', `write ${LOG}`, 'compact', 'submit'])
+})
+
+test('below the new-task level, a checkpoint nobody asked for is refused: nothing written, nothing compacted', async ($, on) => {
+  const clock = mock.clock(on)
+  const { calls } = fakeEngine(on, { tokens: 223_000 })
+  const refused = await checkpoint($)
+  expect(JSON.stringify(refused)).toContain('Not needed yet: 223k used')
+  await endTurn($)
+  await clock.settle()
+  expect(calls).toEqual([])
+})
+
+test('you typed "checkpoint" yourself: allowed below the level, and the ask lasts until one is saved', async ($, on) => {
+  const clock = mock.clock(on)
+  const { calls } = fakeEngine(on, { tokens: 100_000 })
+  await userPrompt($, 'checkpoint dulu, lalu kita lanjut')
+  await endTurn($)
+  await checkpoint($)
+  await endTurn($)
+  await clock.settle()
+  expect(calls).toEqual(['user prompt', `write ${LOG}`, 'compact', 'submit'])
+
+  const again = await checkpoint($)
+  expect(JSON.stringify(again)).toContain('Not needed yet')
 })
 
 test('a 200k window: levels scale to it, so the note and the forced checkpoint come in time', async ($, on) => {

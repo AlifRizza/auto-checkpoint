@@ -135,6 +135,7 @@ flowchart TD
 - **The post-compaction floor.** A compaction never takes the context to zero: the system prompt, the tools, startup hooks and the summary remain, often 50–80k. At the first turn end after each compaction, the mod measures that floor. Any levels below it move up by it, keeping their spacing and staying under 90% of the window. Without this, low levels would force a checkpoint after every turn.
 - **A forced save that fails.** If the forced checkpoint cannot be saved, the mod still compacts, so the window does not overflow. It does not resume, because the log's next step would be stale. Claude waits for you.
 - **A vetoed compaction** (another plugin said no) is not retried on every turn. It is retried once the context is back under `forceAt`.
+- **No checkpoint before it is needed.** Below **New-task check** the `checkpoint` tool refuses a call nobody asked for ("Not needed yet: 223k used…"), so Claude does not compact just because it finished a step or is waiting for your decision. It goes through when you ask: `/save-checkpoint`, or the word "checkpoint" in your message. That ask lasts until a checkpoint is saved.
 - **Subagents** cannot checkpoint, and their turns trigger nothing.
 - **No permission prompt.** The `checkpoint` tool is answered before the permission check, so an unattended session never stops at a dialog. All the tool does is write `PROJECT_LOG.md` and schedule a compaction.
 
@@ -191,7 +192,7 @@ Everything is in `/config`, under **auto-checkpoint**:
 
 ### Commands
 
-- **`/save-checkpoint`** asks Claude to checkpoint at its next safe boundary, or right away if it is between sub-tasks. Use it before you start something new and large.
+- **`/save-checkpoint`** asks Claude to checkpoint at its next safe boundary, or right away if it is between sub-tasks, at any context size. Use it before you start something new and large.
 
 ---
 
@@ -229,7 +230,7 @@ hooks/hooks.json                  names the hooks module
 hooks/register.ts                 wiring: hooks on prompts, tool batches, turn ends, the checkpoint tool
 hooks/log.ts                      pure logic: levels, notes, the log format, prompts, the tool's schema
 types/index.d.ts                  what the mod keeps in session state across a reload
-tests/                            60 tests for the Claude Code test kit
+tests/                            62 tests for the Claude Code test kit
 ```
 
 ## Development

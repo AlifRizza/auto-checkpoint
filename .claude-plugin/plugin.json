@@ -1,6 +1,6 @@
 {
   "name": "auto-checkpoint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Claude decides when to compact: past a token level it checkpoints to PROJECT_LOG.md at a safe sub-task boundary, compacts the same session and carries on",
   "types": "./types/index.d.ts",
   "userConfig": {
